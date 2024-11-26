@@ -11,14 +11,16 @@ public class BidPlacedConsumer(AuctionDbContext dbContext) : IConsumer<BidPlaced
     {
         Console.WriteLine("--> Consuming bid placed");
 
-        var auction = await dbContext.Auctions.FindAsync(Guid.Parse(context.Message.AuctionId));
+        var auction = await dbContext.Auctions.FindAsync(Guid.Parse(context.Message.AuctionId))
+            ?? throw new MessageException(typeof(AuctionFinished),
+            "Cannot retrieve this auction");
 
         if (auction.CurrentHighBid == null
             || context.Message.BidStatus.Contains("Accepted")
             && context.Message.Amount > auction.CurrentHighBid)
         {
             auction.CurrentHighBid = context.Message.Amount;
-            await dbContext.SaveChangesAsync();
         }
+        await dbContext.SaveChangesAsync();
     }
 }

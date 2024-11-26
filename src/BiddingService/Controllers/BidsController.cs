@@ -13,7 +13,7 @@ namespace BiddingService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class BidsController(IMapper mapper, IPublishEndpoint publishEndpoint, GrpcAuctionClient grpcClient) 
+public class BidsController(IMapper mapper, IPublishEndpoint publishEndpoint, GrpcAuctionClient grpcClient)
     : ControllerBase
 {
     [Authorize]
@@ -29,10 +29,12 @@ public class BidsController(IMapper mapper, IPublishEndpoint publishEndpoint, Gr
             if (auction == null) return BadRequest("Cannot accept bids on this auction at this time");
         }
 
-        if (auction.Seller == User.Identity.Name)
+        if (auction.Seller == User.Identity?.Name)
         {
             return BadRequest("You cannot bid on your own auction");
         }
+
+        if (User.Identity?.Name == null) return Unauthorized();
 
         var bid = new Bid
         {
@@ -47,9 +49,10 @@ public class BidsController(IMapper mapper, IPublishEndpoint publishEndpoint, Gr
         }
         else
         {
-            var highBid = await DB.Find<Bid>().Match(a => a.AuctionId == auctionId)
-                        .Sort(b => b.Descending(x => x.Amount))
-                        .ExecuteFirstAsync();
+            var highBid = await DB.Find<Bid>()
+                .Match(a => a.AuctionId == auctionId)
+                .Sort(b => b.Descending(x => x.Amount))
+                .ExecuteFirstAsync();
 
             if (highBid != null && amount > highBid.Amount || highBid == null)
             {
